@@ -1,0 +1,111 @@
+Domain covidVaccineProcurementD
+	Manufacturer isA Role;
+	Government isA Role;
+	Invoiced isA Event with Env reqID : String, Env noOfDoses : Number, Env date : Date;
+	Paid isA Event with Env reqID : String, Env amount : Number;
+	Requested isA Event with Env reqID : String, Env dosage : Number, Env date : Date;
+	LeadtimeInformedNegotiated isA Event with Env reqID : String, Env date : Date;
+	NotifiedOfDelivery isA Event with Env reqID : String, Env delD : Date;
+	Location isAn Enumeration(Ottawa, Toronto, Montrial, Vancover);
+	Confirmed isA Event with Env reqID : String, Env shipToLocation: Location;
+	Delivered isA Event with Env reqID : String, Env dosage : Number, Env delAddr : Location, Env date: Date, Env
+	temperature: Number;
+	VaccineDose isA Asset with  price : Number, FDAapproval : Boolean, owner: Manufacturer;
+	StopWork isA Event;
+	Agreed isA Event with Env reqID: String;
+	Risk isA Event with Env reqID: String, Env extendedDel: Date;
+	Remain isA Asset with value:Number, owner: Government;
+	PaidAmount isA Asset with value:Number, owner: Government;
+	WithdrewApproval isA Event;
+	TerminateAgreement isA Event;
+endDomain
+
+Contract VaccineProcurementC (pfizer :Manufacturer, mcdc:Government,
+ approval : Boolean, unitPrice : Number, minQuantity : Number, maxQuantity:Number, temperature : Number )
+Declarations
+	requested : Requested;
+	leadtimeINform : LeadtimeInformedNegotiated;
+	notifiedOD : NotifiedOfDelivery;
+	delivered : Delivered;
+	invoiced : Invoiced;
+	paid : Paid;
+	confirmed: Confirmed ;
+	lawStopWork: StopWork;
+	regulationStopWork:StopWork;
+	judicialStopWork:StopWork;
+	adminStopWork: StopWork;
+	govStopWork: StopWork;
+	vaccineDose : VaccineDose with  price := unitPrice, FDAapproval := approval, owner:=pfizer;
+	agreedFromG: Agreed;
+    outsideRisk: Risk;
+    remain: Remain with value:= maxQuantity, owner:=mcdc;
+    paidAmount:PaidAmount with value:=0, owner:=mcdc;
+    withdrewApproval: WithdrewApproval;
+    mcdcTerminateAgreement: TerminateAgreement;
+    pfizerTerminateAgreement: TerminateAgreement;
+
+Preconditions
+vaccineDose.FDAapproval==true;
+
+Obligations
+    // to keep the contract in active state until the remain doses is less than the minimum requested quantity (end of performance) and the mcdc and pfizer terminate the agreement
+	oRequestVaccineDosage: O(mcdc, pfizer, true, (remain.value< minQuantity) 
+		                     and Happens(Fulfilled(obligations.oAgreedOnRequest))
+							 and Happens(Fulfilled(obligations.oDeliver)) and Happens(Fulfilled(obligations.oAssign))
+							 and  Happens(mcdcTerminateAgreement) and Happens(pfizerTerminateAgreement)
+													 
+	); //3.2
+	// A Request must satisfy all the conditions required in a particular order
+	oAgreedOnRequest: Happens(requested)-> O(mcdc,pfizer,Happens(agreedFromG), 
+		                ShappensBefore(leadtimeINform,agreedFromG) 
+						and leadtimeINform.reqID==requested.reqID and agreedFromG.reqID==requested.reqID 
+						and (requested.dosage >= minQuantity and requested.dosage<=remain.value)
+						);	
+																																								
+	// A delivery obligation is achieved if the delivering operation satisfies all the conditions required in a particular order 
+	oDeliver: Happens(requested)->O(pfizer,mcdc, Happens(Fulfilled(obligations.oAgreedOnRequest)) 
+		         and Happens(confirmed),
+		        ShappensBefore(notifiedOD,confirmed) 
+		        and Happens(delivered) 
+				and (delivered.temperature <= temperature) and  delivered.delAddr==confirmed.shipToLocation 
+				and vaccineDose.FDAapproval==true 
+				and delivered.reqID==requested.reqID
+				and notifiedOD.reqID==requested.reqID and confirmed.reqID==requested.reqID 
+				and ((delivered.date==notifiedOD.delD) or 
+					   (Happens(outsideRisk) and delivered.date==outsideRisk.extendedDel and requested.reqID==outsideRisk.reqID)
+				    )
+				);
+				
+	// Calculate the remains of the doses and the price of the doses delivered when the required doses are delivered, fulfilling all the agreed-upon conditions 											
+	oAssign: Happens(requested)->O(mcdc,pfizer,Happens(delivered) and delivered.reqID==requested.reqID, 
+				   HappensAssign(Fulfilled(obligations.oDeliver), remain.value:=remain.value-delivered.dosage; paidAmount.value:=delivered.dosage * vaccineDose.price )
+				   and delivered.reqID==requested.reqID
+				);					
+																																						
+Surviving Obligations
+
+//Checking the agreed terms necessary to activate and complete the payment process 
+	oPay: Happens(requested)-> Obligation(mcdc, pfizer, Happens(invoiced) and vaccineDose.FDAapproval==true and invoiced.reqID==requested.reqID , 
+		    Happens(Fulfilled(obligations.oDeliver)) 
+		    and ShappensBefore(delivered,invoiced) and
+			ShappensBefore(paid, Date.add(invoiced.date , 30, days))
+			and delivered.reqID==requested.reqID
+			and invoiced.reqID==requested.reqID  
+			and invoiced.reqID==paid.reqID
+			and paid.amount == paidAmount.value
+			); 	
+			
+// FDA approval monitoring where mcdc must pay for vaccine doses already approved by FDA					
+	oWithdrewApproval: O(pfizer, mcdc,Happens(withdrewApproval), 
+				   Assign(vaccineDose.FDAapproval:=false )				   
+				);								
+Powers
+// mcdc has the power to stop the work if one of the following four events occurs
+	pStopWork: Happens(lawStopWork) or Happens(adminStopWork) or Happens(regulationStopWork) or Happens(judicialStopWork) ->
+					P(mcdc, pfizer, Happens(govStopWork), Terminated(self));
+					
+// Terminate the contract at the end of the performance
+	pTermination: Happens(Fulfilled(obligations.oRequestVaccineDosage)) -> P(pfizer,mcdc, true, Terminated(self));
+	
+endContract
+
