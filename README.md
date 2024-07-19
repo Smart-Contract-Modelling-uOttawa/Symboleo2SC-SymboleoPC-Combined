@@ -126,7 +126,7 @@ endContract
 
 # Installation
 
-Follow [installation instruction](https://github.com/Smart-Contract-Modelling-uOttawa/SymboleoPC/blob/main/INSTALL.md) to install SymboleoPC.
+Follow [installation instruction](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/INSTALL.md) to install SymboleoPC.
 
 # Refer to DOC for additional information regarding Symboleo
 
@@ -138,7 +138,7 @@ Follow [Symboleo Specification instruction](https://github.com/Smart-Contract-Mo
 
 # To Test with different samples contract
 
-Follow [Different Samples are uploaded here] (https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/tree/master/samples) to test with different contacts.
+Follow [Different Samples are uploaded here](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/tree/master/samples) to test with different contacts.
 
 # Deploy to Hyperledger Fabric
 
