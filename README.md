@@ -127,3 +127,19 @@ endContract
 # Installation
 
 Follow [installation instruction](https://github.com/Smart-Contract-Modelling-uOttawa/SymboleoPC/blob/main/INSTALL.md) to install SymboleoPC.
+
+# Refer to DOC for additional information regarding Symboleo
+
+Follow [DOC](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/DOC.md) for information.
+
+# To convert Symboleo specification to smv module
+
+Follow [Symboleo Specification instruction](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/Symboleo2SMVModel.md) to convert to smv module.
+
+# To Test with different samples contract
+
+Follow [Different Samples are uploaded here] (https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/tree/master/samples) to test with different contacts.
+
+# Deploy to Hyperledger Fabric
+
+Follow [Deploy instructions](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/DEPLOY.md) to deploy on hyperledger.
