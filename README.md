@@ -132,6 +132,20 @@ Follow [installation instruction](https://github.com/Smart-Contract-Modelling-uO
 
 Follow [DOC](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/DOC.md) for information.
 
+# How to generate the contracts?
+
+![alt text](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/images/2sc.png "Running Step-1")
+
+- Just right click on ca.uottawa.csmlab.symboleo then from drop down got to run as and then select Eclipse application as shown in above screenshot.
+
+![alt text](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/images/Pc.png "Running Step-2.")
+
+- Now in the new runtime eclipse window (here we are taking the example of Meat sale) so just save the file in which you are working here Meat Sale which will generates the contracts in src-gen folder.
+
+![alt text](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/images/2sc_pc_combined.png "Runing Step_3")
+
+- In src-gen folder the MeatSale is generated which contains the contracts in javascript extension and SymboleoPC contains the contracts in smv extension.
+
 # To convert Symboleo specification to smv module
 
 Follow [Symboleo Specification instruction](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/Symboleo2SMVModel.md) to convert to smv module.
@@ -139,6 +153,10 @@ Follow [Symboleo Specification instruction](https://github.com/Smart-Contract-Mo
 # To Test with different samples contract
 
 Follow [Different Samples are uploaded here](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/tree/master/samples) to test with different contacts.
+
+# Symboleo 2SC demo
+
+Follow [Symboleo 2SC](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-demo) which contains already generated contracts for Symboleo 2SC.
 
 # Deploy to Hyperledger Fabric
 
