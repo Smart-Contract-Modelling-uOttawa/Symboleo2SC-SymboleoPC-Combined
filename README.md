@@ -134,15 +134,15 @@ Follow [DOC](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-Sym
 
 # How to generate the contracts?
 
-![alt text](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/images/2sc.png "Running Step-1")
+![alt text](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/images/Run_1.png "Running Step-1")
 
 - Just right click on ca.uottawa.csmlab.symboleo then from drop down got to run as and then select Eclipse application as shown in above screenshot.
 
-![alt text](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/images/Pc.png "Running Step-2.")
+![alt text](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/images/Run_2.png "Running Step-2.")
 
 - Now in the new runtime eclipse window (here we are taking the example of Meat sale) so just save the file in which you are working here Meat Sale which will generates the contracts in src-gen folder.
 
-![alt text](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/images/2sc_pc_combined.png "Runing Step_3")
+![alt text](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-SymboleoPC-Combined/blob/master/images/Run_3.png" "Runing Step_3")
 
 - In src-gen folder the MeatSale is generated which contains the contracts in javascript extension and SymboleoPC contains the contracts in smv extension.
 
