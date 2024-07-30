@@ -1991,13 +1991,13 @@ def boolean ifAssign(PredicateFunction predicate){
 			
 			// trim parameters
 			parameters = parameters.replace("\r\n", "")
-			if(parameters.length() > 1)
-				parameters = parameters.substring(0, parameters.length()-2)
-			
+//			if(parameters.length() > 1)
+//				parameters = parameters.substring(0, parameters.length()-2)
+				parameters= clearparameters(parameters);
 			// make nuXmv module
 			val code = '''
 				«IF event.attributes.size()>0»
-					MODULE «event.name»(start, «parameters»)
+					MODULE «event.name»(start, «clearparameters(parameters)»)
 				«ELSE»
 					MODULE «event.name»(start)
 				«ENDIF»					
@@ -2024,11 +2024,12 @@ def boolean ifAssign(PredicateFunction predicate){
 			
 			// trim parameters
 			parameters = parameters.replace("\r\n", "")
-			parameters = parameters.substring(0, parameters.length()-2)
+//			parameters = parameters.substring(0, parameters.length()-2)
+			parameters= clearparameters(parameters);
 			
 			val code = '''
 				«IF allAttributes.size()>0»
-					MODULE «event.name»(start, «parameters»)
+					MODULE «event.name»(start,«clearparameters(parameters)»)
 					 DEFINE
 							«FOR attribute : event.attributes»
 							«generateAssetAttributes(attribute)»
@@ -2321,16 +2322,18 @@ def boolean ifAssign(PredicateFunction predicate){
 		if (isBase === true) {
 			var parameters = '''
 			«FOR att : asset.attributes»
-			«att.name», 
+			«att.name»,
 			«ENDFOR»
 			'''
 			
 			// trim parameters
 			parameters = parameters.replace("\r\n", "")
-			if(parameters.length() > 1)
-				parameters = parameters.substring(0, parameters.length()-2)
-			
+//			if(parameters.length() > 1)
+//				parameters = parameters.substring(0, parameters.length()-2)
+				
 			// make nuXmv module
+			//clear the parameters  
+				parameters= clearparameters(parameters)
 			val code = '''
 				«IF asset.attributes.size()>0»
 					MODULE «asset.name» («parameters»)
@@ -2368,7 +2371,6 @@ def boolean ifAssign(PredicateFunction predicate){
 				if(param.length() > 1){
 					param = param.substring(0, param.length()-2)
 					
-					//if(!param.equals("owner")){
 						if(parameters.length == 0)
 							parameters += param
 						else 
@@ -2380,7 +2382,7 @@ def boolean ifAssign(PredicateFunction predicate){
 						parentParams += ', ' + param
 				}
 			}
-			
+			parameters=clearparameters(parameters)
 			val code = '''
 				MODULE «asset.name» («parameters»)
 				«IF asset.attributes.size()>0»
@@ -2395,11 +2397,24 @@ def boolean ifAssign(PredicateFunction predicate){
 						«ENDFOR»
 				«ENDIF»
 				 VAR
-						asset:«parentType.name»(«parentParams»);
+						asset:«parentType.name»(«clearparameters(parentParams)»);
 			'''
 			pcAssets.add(code)
 		}
 	}
+	def String clearparameters (String pararg) {
+		var String s1="" ;  
+		var String s2="" ;  
+		var result = pararg.trim();
+		s1=result.replaceAll(",+", ",")
+	    s2=s1.replaceAll("^,|,$", "")
+	    // Remove trailing comma if present
+	    if (s2.endsWith(",")) {
+	        s2 = s2.substring(0, s2.length() - 1);
+	    }
+	    return s2 
+	}
+	
 	
 	def String generateEventInitSituation (Model model, String eventName) {
 		var List<String> situations = new ArrayList<String>()
