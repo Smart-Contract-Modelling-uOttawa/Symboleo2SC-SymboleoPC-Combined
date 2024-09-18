@@ -24,11 +24,6 @@ Change it to:
   		performer: {"Processor", "Controller"}; 
 		state=active & start: {"Processor", "Controller"};
 ~~~
-- Under contract section. In the contract module, add the two parties as parameters too.
-- all the variables of type Asset, change the owner parameter (i.e, atos) to atos.role._party
-	For example MODULE DataProcessingAgreement (atos, client, instruction, dataId, dataPoint, amount)
-	--> will be:
-	 MODULE DataProcessingAgreement (atos, client, instruction, dataId, dataPoint, amount)
 - To pass the expected values of the parameters, create the main model that includes all the variable declarations and their expected values. Also, you can assign specific values if you want to test a specific scenario.
 - Pass the values to the contract via its parameters.
 	For example:
