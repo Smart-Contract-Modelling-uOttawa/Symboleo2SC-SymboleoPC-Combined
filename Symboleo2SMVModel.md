@@ -1,7 +1,6 @@
 # To convert Symboleo specification to smv module:
 Open dataProcessingAgreement.symboleo file using SymboleoPC tool
-~~~
-~~~
+
 - be sure all the assets have owner attribute of type of role (i.e., Processor, Controller)
    e.g.
   ~~~
