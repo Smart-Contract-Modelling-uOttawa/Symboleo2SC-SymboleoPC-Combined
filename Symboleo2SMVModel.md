@@ -1,15 +1,16 @@
 # To convert Symboleo specification to smv module:
-Open dataProcessingAgreement.symboleo file using SymboleoPC tool:
-- change all the environment attributes to normal attributes (delete ENV keyword before each attribute in the Domain section) and add them to the contract parameters as their values will be passed through these parameters.
-Notice that when you changed all the ENV attributes to normal attributes, errors will appear in the Declaration section where you have to assign values to some of those attributes. Don't assign values but assign variables to those attributes and add them to the contract as parameters.
- e.g.
+Open dataProcessingAgreement.symboleo file using SymboleoPC tool
 ~~~
-Contract DataProcessingAgreement (atos: Processor, client: Controller, instruction: Instruction, dataId: String, dataPoint: Data, amount: Number)
 ~~~
 - be sure all the assets have owner attribute of type of role (i.e., Processor, Controller)
    e.g.
   ~~~
    Data isAn Asset with id: String, content: String, owner: Controller;
+  ~~~
+  Go to the declaration and add the owner to the attribute of variable of the type data and assign the suitable owner to it
+  e.g.
+  ~~~
+   data: Data with id:=idParameter, content:= contentParameter, owner:= controller;
   ~~~
 - Then save the file.symboleo. The smv model will be created.
 # To execute it:
