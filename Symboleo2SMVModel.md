@@ -57,6 +57,6 @@ Change it to:
 	--* Description : A contract eventually terminates.
 	--* Type        : Desirable property
 	LTLSPEC NAME LTL11 := F(DataProcessing_cnt.cnt.state = sTermination | DataProcessing_cnt.cnt.state = unsTermination)
- ~~~
+
 
 
