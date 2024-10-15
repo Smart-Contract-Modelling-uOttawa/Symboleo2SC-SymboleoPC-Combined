@@ -1,15 +1,15 @@
 # To convert Symboleo specification to smv module:
-Open dataProcessingAgreement.symboleo file using SymboleoPC tool:
-- change all the environment attributes to normal attributes (delete ENV keyword before each attribute in the Domain section) and add them to the contract parameters as their values will be passed through these parameters.
-Notice that when you changed all the ENV attributes to normal attributes, errors will appear in the Declaration section where you have to assign values to some of those attributes. Don't assign values but assign variables to those attributes and add them to the contract as parameters.
- e.g.
-~~~
-Contract DataProcessingAgreement (atos: Processor, client: Controller, instruction: Instruction, dataId: String, dataPoint: Data, amount: Number)
-~~~
+Open dataProcessingAgreement.symboleo file using SymboleoPC tool
+
 - be sure all the assets have owner attribute of type of role (i.e., Processor, Controller)
    e.g.
   ~~~
    Data isAn Asset with id: String, content: String, owner: Controller;
+  ~~~
+  Go to the declaration and add the owner to the attribute of variable of the type data and assign the suitable owner to it
+  e.g.
+  ~~~
+   data: Data with id:=idParameter, content:= contentParameter, owner:= controller;
   ~~~
 - Then save the file.symboleo. The smv model will be created.
 # To execute it:
@@ -24,11 +24,6 @@ Change it to:
   		performer: {"Processor", "Controller"}; 
 		state=active & start: {"Processor", "Controller"};
 ~~~
-- Under contract section. In the contract module, add the two parties as parameters too.
-- all the variables of type Asset, change the owner parameter (i.e, atos) to atos.role._party
-	For example MODULE DataProcessingAgreement (atos, client, instruction, dataId, dataPoint, amount)
-	--> will be:
-	 MODULE DataProcessingAgreement (atos, client, instruction, dataId, dataPoint, amount)
 - To pass the expected values of the parameters, create the main model that includes all the variable declarations and their expected values. Also, you can assign specific values if you want to test a specific scenario.
 - Pass the values to the contract via its parameters.
 	For example:
@@ -62,6 +57,6 @@ Change it to:
 	--* Description : A contract eventually terminates.
 	--* Type        : Desirable property
 	LTLSPEC NAME LTL11 := F(DataProcessing_cnt.cnt.state = sTermination | DataProcessing_cnt.cnt.state = unsTermination)
- ~~~
+
 
 
