@@ -105,7 +105,6 @@ import ca.uottawa.csmlab.symboleo.symboleo.Assignment
 import ca.uottawa.csmlab.symboleo.symboleo.OAssignment
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionAssignmentOnly
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionAssignment
-import java.util.concurrent.TimeUnit
 import ca.uottawa.csmlab.symboleo.generator.SymboleoGenerator
 
 
@@ -233,6 +232,8 @@ class SymboleoPCGenerator extends SymboleoGenerator {
 	val pcVariables = new ArrayList<DeclarationVariable>
 	val pcSituations = new ArrayList<String>
 	val pcRoles = new ArrayList<String>
+	val eventEnv = new ArrayList<String>
+	val rolesParameters=new ArrayList<Parameter>
 	val pcAssets = new ArrayList<String>
 	val pcDomEvents = new ArrayList<String>
 	val pcEnumerations = new ArrayList<String>
@@ -364,16 +365,17 @@ class SymboleoPCGenerator extends SymboleoGenerator {
 			PredicateFunctionHappensWithin: return '''«extractEventVariableString(predicate.event)»'''
 			PredicateFunctionAssignment: return '''«extractEventVariableString(predicate.event)»'''
 	        PredicateFunctionAssignmentOnly: return '''TRUE'''
-		}	
-	}
-def boolean ifAssign(PredicateFunction predicate){
-		switch (predicate){
-		PredicateFunctionAssignment:return true
-	     PredicateFunctionAssignmentOnly: return true
-	     default: return false
-	
-		}	
-	}
+			}	
+		}
+		
+	def boolean ifAssign(PredicateFunction predicate){
+			switch (predicate){
+			PredicateFunctionAssignment:return true
+		     PredicateFunctionAssignmentOnly: return true
+		     default: return false
+		
+			}	
+		}
 	
 	def String getSituations () {
 		var situations = ""
@@ -398,6 +400,7 @@ def boolean ifAssign(PredicateFunction predicate){
 			default: print("Not considered event="+event)
 		}
 	}
+	
 	override def String generateEventVariableString(Event event){
 
 		switch (event){
@@ -409,12 +412,9 @@ def boolean ifAssign(PredicateFunction predicate){
 			ObligationEvent: return '''«event.obligationVariable.name».state=«eventToSituation(event.eventName.toLowerCase)»'''			
 
 			ContractEvent: return '''cnt.state=«eventToSituation(event.eventName.toLowerCase)»'''
-
 		}	
 
 	}
-	
-
 	
 	def boolean isDuplicate(String event1, String event2, String happenClass) {
 		for(variable : pcVariables) {
@@ -740,13 +740,13 @@ def boolean ifAssign(PredicateFunction predicate){
 		       					pairs.add(pair1)
 		       					pairs.add(pair2)
 		       					addVariable("hafter_" + pair1.value + "_" + pair2.value, null, "HappensAfter", pairs)
-		       				}
+			       				}
+			       			}
 		       			}
-	       			}
-	       		}	
-	    }
-	}
-		
+		       		}	
+		    }
+		}
+			
 	def String generateVEProposition (String normName, String ev) {
 		return "(" + ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + normName + "_debtor._name & " + normName + "_debtor._is_performer)))"
 	}
@@ -1275,11 +1275,7 @@ def boolean ifAssign(PredicateFunction predicate){
 				expression += "." + id
 
 			}
-
-				
-
 		return expression
-
 	}
 	
 	def String extractEventVariableString(Event event){
@@ -1293,7 +1289,6 @@ def boolean ifAssign(PredicateFunction predicate){
 	}
 	
 
-	
 	def String inverseOperator(String op) { 
 		switch (op) {
 			case '!=': return '='
@@ -1436,7 +1431,6 @@ def boolean ifAssign(PredicateFunction predicate){
 	       			
 	       }
 	}
-	// Amal added assign and assignonly no modification
 	def String generatePredicateFunctionString(String normName, normType nType, propositionType pType, PredicateFunction predicate){		
 		switch (predicate){
 			PredicateFunctionHappens: {
@@ -1578,6 +1572,7 @@ def boolean ifAssign(PredicateFunction predicate){
 			}
 		}
 	}
+	
 	override def String generateExpressionString(Expression argExpression, String thisString) {
 
 		switch (argExpression){
@@ -1622,8 +1617,6 @@ def boolean ifAssign(PredicateFunction predicate){
 
 	}
 
-
-
 	override def String generateFunctionCall(PrimaryExpressionFunctionCall argFunctionCallExp, String thisString) {
 
 		val functionCall = argFunctionCallExp.function
@@ -1639,7 +1632,6 @@ def boolean ifAssign(PredicateFunction predicate){
 			OneArgStringFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
 
 		}
-
 	}
 	
 	
@@ -1874,7 +1866,7 @@ def boolean ifAssign(PredicateFunction predicate){
 		 DEFINE _party := party;
 		
 		MODULE Asset(owner)
-		 DEFINE _owner := owner;
+		 DEFINE _owner := owner.role._party;
 		 
 		MODULE Situation(proposition)
 		 DEFINE _holds := proposition;
@@ -1979,6 +1971,7 @@ def boolean ifAssign(PredicateFunction predicate){
 	def void generateEnumeration(Enumeration enumeration) {
 		pcEnumerations.add(getEnumItems(enumeration))
 	}
+	
 	def void generateEvent(IFileSystemAccess2 fsa, RegularType event) {
 		val isBase = event.ontologyType !== null
 		if (isBase === true) {
@@ -2043,6 +2036,7 @@ def boolean ifAssign(PredicateFunction predicate){
 			pcDomEvents.add(code)
 		}
 	}
+	
 	def void generateRole(IFileSystemAccess2 fsa, RegularType role) {
 		val isBase = role.ontologyType !== null
 		if (isBase === true) {
@@ -2129,6 +2123,37 @@ def boolean ifAssign(PredicateFunction predicate){
 		'''
 		return code
 	}
+	def String generateRoleInstances2() {
+			var key="";
+			var count=0;
+			for (param : parameters) {		
+				if (param.type.domainType instanceof RegularTypeImpl) {
+					var DomainType domainType = param.type.domainType
+					var RegularType base = getBaseType(domainType)
+					if (base !== null) {
+						if (base.ontologyType.name == 'Role') {
+	        			key=key+param.name + ",";
+	        			rolesParameters.add(param);
+	        			count++;
+						}
+					}
+				}
+				}
+			return key;
+	}
+	
+	def boolean ifRoleInstances2(String par) {
+		var key=false;
+	        for (param : rolesParameters) {	
+	        		if (par==param.name){
+	        					key=true;
+	        					return true;	
+	        				}
+				}
+					
+		return key;
+	}
+
 	
 	/**
 	 * Description: convert Symboleos contract concept to SymboleoPCs module
@@ -2164,8 +2189,10 @@ def boolean ifAssign(PredicateFunction predicate){
 		
 		--------------------------------------------------------------------------------------
 		-- CONTRACT
-		--------------------------------------------------------------------------------------
-		MODULE «model.contractName» («pcParameters.join(', ')»)
+		-------------------------------------------------------------------------------------
+		«addEnvVariablesToParameters(model)»
+
+		MODULE «model.contractName» («generateRoleInstances2()»«pcParameters.join(', ')»«eventEnv.length()> 0 ? ','» «eventEnv.join(', ')»)
 		
 			CONSTANTS
 			«generateConstants()»
@@ -2511,47 +2538,141 @@ def boolean ifAssign(PredicateFunction predicate){
 	
 	
 	def void addDeclarationVariables (Model model) {
-		for(variable: model.variables) {		
-			var situation = generateEventInitSituation(model, variable.name); //this is used only for events
-			var assgs = new ArrayList<Pair<String, String>>
-			
-			if(variable.type instanceof RegularType)
-				for(assignment: variable.attributes){
-					if(assignment instanceof AssignExpression)
-						assgs.add(new Pair(assignment.name, generateExpressionString(assignment.value, null)))						
+			for(variable: model.variables) {		
+				var situation = generateEventInitSituation(model, variable.name); //this is used only for events
+				var assgs = new ArrayList<Pair<String, String>>
+				var astname = "";
+				if(variable.type instanceof RegularType){
+							 var RegularType base = getBaseType(variable.type);
+								if (base !== null){
+									if (base.ontologyType.name == "Event"){
+										 astname = base.name
+										}
+									}
+			if (base.ontologyType.name == "Event"){
+						for (event : events){
+				if(event.name==astname){
+					System.out.println("event.name." + event.name);
+			var found=0;
+	         for (att : event.attributes){
+			   found=0;
+					for(assignment: variable.attributes){
+						System.out.println("Attributes = " + assignment);
+						if(assignment instanceof AssignExpression){
+							if (att.name == assignment.name ) {
+							found=1;
+							assgs.add(new Pair(assignment.name, generateExpressionString(assignment.value, null)));	
+							System.out.println("Assignment = " + assignment.name + generateExpressionString(assignment.value, null));		
+							}			
+							}
 						}
-						
-			addVariable(variable.name, situation, variable.type.name, assgs)
+						if (found==0){
+						eventEnv.add(att.name +'p');
+						assgs.add(new Pair(att.name,att.name +'p'));
+							      System.out.println("Not found Assignment = " + att.name+'p   =' + att.name);
+							      }
+				
+						}
+						//Our loop should close here!
+						}
+						}
+				
+			}
+			else{
+								for(assignment: variable.attributes){
+						System.out.println("Attributes = " + assignment);
+						if(assignment instanceof AssignExpression){
+							assgs.add(new Pair(assignment.name, generateExpressionString(assignment.value, null)))	
+							System.out.println("Assignment = " + assignment.name + generateExpressionString(assignment.value, null));					
+							}
+						}
+					}	
+						}
+							
+				addVariable(variable.name, situation, variable.type.name, assgs)
 		}
-	}
+		}
+		
+	def void addEnvVariablesToParameters(Model model) {
+			for(variable: model.variables) {		
+				var astname = "";
+				if(variable.type instanceof RegularType){
+							 var RegularType base = getBaseType(variable.type);
+								if (base !== null){
+									if (base.ontologyType.name == "Event"){
+										 astname = base.name
+			for (event : events){
+				if(event.name==astname){
+		var found=0;
+	         for (att : event.attributes){
+			   found=0;
+					for(assignment: variable.attributes){
+						if(assignment instanceof AssignExpression){
+							if (att.name == assignment.name ) {
+							found=1;
+													}			
+							}
+						}
+						if (found==0){
+						eventEnv.add(att.name +'p');
+												      }
+						}
+						//Our loop should close here!
+						}
+						}
+						}
+									}	
+						}
+			}
+			}
+	
+	 def eventparameters(String basename,Variable variable){
+			for (event : events){
+					System.out.println("event.name." + event.name);
+	//			val parentAttributes = new ArrayList<Attribute>(variable.attributes);
+		var found=0;
+	         for (att : event.attributes){
+			   found=0;
+				for (assignment : variable.attributes){
+	
+						System.out.println("Attributes = " + assignment);
+						if(assignment instanceof AssignExpression){
+						    if (att.name == assignment.name ) {
+							 found=1;
+							//assgs.add(new Pair(assignment.name, generateExpressionString(assignment.value, null)));	
+							//first one is the variable and second one is the value				
+							}
+				}
+				}
+				if (found==0){
+				//assgs.add(new Pair(event.name+'p', generateExpressionString(event.name, null)));
+							      System.out.println("Not found Assignment = " + att.name+'p   =' + att.name);}
+				}
+		}
+		}
 	
 	def String compileDeclarationVariables(Model model) {
-		// translate explicit variables
-		addDeclarationVariables(model)
-		
-		// translate implicit variables
-		var code = ""
-		
-		for(variable : pcVariables) {
-			
-			var params = ""
-			if(variable.starter !== null)
-				params += variable.starter
-			
-			if(variable.parameters !== null)
-				for(param : variable.parameters) {
-					if(params.length > 0)
-						params += ", " + param.value
-					else
-						params += param.value
-					//	if 	(param instanceof role)
-				}	
-					
-			code += variable.name + " : " + variable.type + "(" + params + ");\n\n"
+			// translate explicit variables
+			addDeclarationVariables(model)
+			// translate implicit variables
+			var code = ""
+			for(variable : pcVariables) {
+				var params = ""
+				if(variable.starter !== null)
+					params += variable.starter
+				if(variable.parameters !== null)
+					for(param : variable.parameters) {
+						if(params.length > 0){
+							params += ", " + param.value
+							}
+						else
+							params += param.value
+					}	
+				code += variable.name + " : " + variable.type + "(" + params + ");\n\n"
+			}
+			return code;
 		}
-		return code;
-	}
-	
+
 	def String compileConstraints(String cntPrecondition) {
 		
 		// Implicit constraints		
@@ -2877,52 +2998,54 @@ def boolean ifAssign(PredicateFunction predicate){
 		return situation
 	}
 	
-	  def String generatePropositionAssignString(Proposition proposition, String cond) {
-  	 switch (proposition) {
-    	POr:
-        return generatePropositionAssignString(proposition.left, cond) +  generatePropositionAssignString(proposition.right, cond)
-      PAnd:
-        return generatePropositionAssignString(proposition.left, cond) + generatePropositionAssignString(proposition.right, cond)
-      PEquality:
-        return generatePropositionAssignString(proposition.left, cond) + 
-          generatePropositionAssignString(proposition.right, cond)
-      PComparison:
-        return generatePropositionAssignString(proposition.left, cond) +  generatePropositionAssignString(proposition.right, cond)
-      PAtomRecursive:
-        return generatePropositionAssignString(proposition.inner, cond) 
-      NegatedPAtom:
-        return generatePropositionAssignString(proposition.negated, cond) 
-      PAtomPredicate:
-        return generatePredicateAssignString(proposition.predicateFunction, cond)
-      default : return " "
-    }
-  }
-  def String generatePredicateAssignString(PredicateFunction predicate, String cond) {
-    switch (predicate) {
-      PredicateFunctionAssignment: return ''' «generateOAssignObjectString(predicate.assignment, generateEventVariableString(predicate.event), cond)» '''
-       PredicateFunctionAssignmentOnly: return ''' «generateOAssignObjectString(predicate.assignment,"", cond)» '''
-       default : return " "
-    }
-  }
+	def String generatePropositionAssignString(Proposition proposition, String cond) {
+	  	 switch (proposition) {
+	    	POr:
+	        return generatePropositionAssignString(proposition.left, cond) +  generatePropositionAssignString(proposition.right, cond)
+	      PAnd:
+	        return generatePropositionAssignString(proposition.left, cond) + generatePropositionAssignString(proposition.right, cond)
+	      PEquality:
+	        return generatePropositionAssignString(proposition.left, cond) + 
+	          generatePropositionAssignString(proposition.right, cond)
+	      PComparison:
+	        return generatePropositionAssignString(proposition.left, cond) +  generatePropositionAssignString(proposition.right, cond)
+	      PAtomRecursive:
+	        return generatePropositionAssignString(proposition.inner, cond) 
+	      NegatedPAtom:
+	        return generatePropositionAssignString(proposition.negated, cond) 
+	      PAtomPredicate:
+	        return generatePredicateAssignString(proposition.predicateFunction, cond)
+	      default : return " "
+	    }
+	  }
+	  
+  	def String generatePredicateAssignString(PredicateFunction predicate, String cond) {
+	    switch (predicate) {
+	      PredicateFunctionAssignment: return ''' «generateOAssignObjectString(predicate.assignment, generateEventVariableString(predicate.event), cond)» '''
+	       PredicateFunctionAssignmentOnly: return ''' «generateOAssignObjectString(predicate.assignment,"", cond)» '''
+	       default : return " "
+	    }
+	  }
+	  
 	def String generateOAssignObjectString(List<OAssignment> a, String hap, String cond) {
-  	var s = ""
-  	var eName=""
-  	var hapc=""
-  	if (hap!=""){hapc=hap+".event._happened & "}
-		for(e: a){
-		   if (e instanceof OAssignExpression){
-		   	 eName=generateDotExpressionString(e.name2,null )
-           s= s+"ASSIGN \n next("+eName+ ") := case " + hapc+cond+":"+generateExpressionString(e.value, null)+"; TRUE:"+eName+"; esac;"
-           // s= generateExpressionString(a.name, 'contract' )+ OpString(a.op) + generateExpressionString(a.value, 'contract')
-          s=s+" \n"
-          if (!AssignCase.containsKey(eName))
-                 AssignCase.put(eName,"ASSIGN \n next("+eName+ ") := case \n" + hapc+cond+" : "+generateExpressionString(e.value, null)+";")
-              else AssignCase.put(eName,AssignCase.get(eName)+"\n"+hapc+cond+" : "+generateExpressionString(e.value, null)+";")
-          }
-        }
-  	return s
-  	
-  }
+	  	var s = ""
+	  	var eName=""
+	  	var hapc=""
+	  	if (hap!=""){hapc=hap+".event._happened & "}
+			for(e: a){
+			   if (e instanceof OAssignExpression){
+			   	 eName=generateDotExpressionString(e.name2,null )
+	           s= s+"ASSIGN \n next("+eName+ ") := case " + hapc+cond+":"+generateExpressionString(e.value, null)+"; TRUE:"+eName+"; esac;"
+	           // s= generateExpressionString(a.name, 'contract' )+ OpString(a.op) + generateExpressionString(a.value, 'contract')
+	          s=s+" \n"
+	          if (!AssignCase.containsKey(eName))
+	                 AssignCase.put(eName,"ASSIGN \n next("+eName+ ") := case \n" + hapc+cond+" : "+generateExpressionString(e.value, null)+";")
+	              else AssignCase.put(eName,AssignCase.get(eName)+"\n"+hapc+cond+" : "+generateExpressionString(e.value, null)+";")
+	          }
+	        }
+	  	return s
+	  	
+	  }
   
   def String UnifyTime(Integer t, String timeUnit, Model model){
   	    // val compU = Integer.parseInt(t)
@@ -2984,42 +3107,42 @@ def boolean ifAssign(PredicateFunction predicate){
 		}
 			
 	}
- def String implicitConstraints(){
- 	    val typeVar= new ArrayList<String>
- 	    
- 	     typeVar.add("HappensAfter")
- 	     typeVar.add( "WhappensBefore")
- 	     typeVar.add("ShappensBefore")
- 	     typeVar.add("HappensWithin")
-  	    var imp = ""
-  	    
-  	    for(i :0..< pcVariables.size) {
-  	    	if(typeVar.contains(pcVariables.get(i).type)){ 
-  	    		pcVariablesOnly.add(pcVariables.get(i))
-  	    		}
-  	    		}
-  	    		
-  	    	for(i :0..< pcVariablesOnly.size) {	
-               for (j : i+1..< pcVariablesOnly.size) {
-    		//	if(typeVar.contains(pcVariables.get(j).type)){
-    		     
- 	             imp+= creatimplVar(i, j )
- 	    	}
-       
-        }  		
-      for (j : 0..< pcVariablesOnly.size-1) {
-    		//	if(typeVar.contains(pcVariables.get(j).type)){
-    		      var impTemp=creatimplVar(pcVariablesOnly.size-1, j )
-    		     if(!imp.contains(impTemp)) {
- 	             		imp+= impTemp
- 	             
- 	             }
- 	    	}   	
-   // imp+= creatimplVar(pcVariablesOnly.size-1, 0 )
-	    
-  	  return imp  
-  	    
-	}
+	 def String implicitConstraints(){
+	 	    val typeVar= new ArrayList<String>
+	 	    
+	 	     typeVar.add("HappensAfter")
+	 	     typeVar.add( "WhappensBefore")
+	 	     typeVar.add("ShappensBefore")
+	 	     typeVar.add("HappensWithin")
+	  	    var imp = ""
+	  	    
+	  	    for(i :0..< pcVariables.size) {
+	  	    	if(typeVar.contains(pcVariables.get(i).type)){ 
+	  	    		pcVariablesOnly.add(pcVariables.get(i))
+	  	    		}
+	  	    		}
+	  	    		
+	  	    	for(i :0..< pcVariablesOnly.size) {	
+	               for (j : i+1..< pcVariablesOnly.size) {
+	    		//	if(typeVar.contains(pcVariables.get(j).type)){
+	    		     
+	 	             imp+= creatimplVar(i, j )
+	 	    	}
+	       
+	        }  		
+	      for (j : 0..< pcVariablesOnly.size-1) {
+	    		//	if(typeVar.contains(pcVariables.get(j).type)){
+	    		      var impTemp=creatimplVar(pcVariablesOnly.size-1, j )
+	    		     if(!imp.contains(impTemp)) {
+	 	             		imp+= impTemp
+	 	             
+	 	             }
+	 	    	}   	
+	   // imp+= creatimplVar(pcVariablesOnly.size-1, 0 )
+		    
+	  	  return imp  
+	  	    
+		}
 	def String creatimplVar(Integer i, Integer j ){
 		  if  (pcVariablesOnly.get(i).type.equals("HappensAfter") ){ 
  	     	                  
