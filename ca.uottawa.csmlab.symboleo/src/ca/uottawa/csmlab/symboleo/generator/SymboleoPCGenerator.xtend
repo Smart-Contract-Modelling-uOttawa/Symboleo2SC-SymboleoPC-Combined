@@ -49,6 +49,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.PAtomPredicate
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomEnum
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomRecursive
 import ca.uottawa.csmlab.symboleo.symboleo.PComparison
+import ca.uottawa.csmlab.symboleo.symboleo.PArithmetic
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomVariable
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomPredicateTrueLiteral
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomPredicateFalseLiteral
@@ -106,6 +107,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.OAssignment
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionAssignmentOnly
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionAssignment
 import ca.uottawa.csmlab.symboleo.generator.SymboleoGenerator
+import ca.uottawa.csmlab.symboleo.symboleo.Mod
 
 
 
@@ -784,6 +786,7 @@ class SymboleoPCGenerator extends SymboleoGenerator {
 			PAnd: return generateViolateExpireString(normName, proposition.left) + "|" + generateViolateExpireString(normName, proposition.right) 
 			PAtomRecursive: return "(" + generateViolateExpireString(normName, proposition.inner) + ")"
 			PComparison: return generateViolateExpireString(normName, proposition.left) + inverseOperator(proposition.op) + generateViolateExpireString(normName, proposition.right)
+			PArithmetic: return generateViolateExpireString(normName, proposition.left) + getArithmeticOperator(proposition.op) + generateViolateExpireString(normName, proposition.right)
 			NegatedPAtom: return "(" + generateViolateExpireString(normName, proposition.negated) + ")"
 			PEquality: return generateViolateExpireString(normName, proposition.left) + inverseOperator(proposition.op) + generateViolateExpireString(normName, proposition.right)
 			PAtomVariable: return generateDotExpressionString(proposition.variable, null)
@@ -1300,6 +1303,15 @@ class SymboleoPCGenerator extends SymboleoGenerator {
 		}
 	}
 	
+	def String getArithmeticOperator(String op) { 
+		switch (op) {
+			case '+': return '+'
+        	case '-': return '-'
+        	case '*': return '*'
+        	case '/': return '/'
+		}
+	}
+	
 	def String getHappensPredicateVarName(PredicateFunction it) {
 		if(it instanceof PredicateFunctionWHappensBefore){
 	       		val point = it.point
@@ -1510,6 +1522,7 @@ class SymboleoPCGenerator extends SymboleoGenerator {
 			PAnd: return generatePropositionString(normName, nType, pType, proposition.left) + " & " + generatePropositionString(normName, nType, pType, proposition.right) 
 			PEquality: return generatePropositionString(normName, nType, pType, proposition.left) + getEqualityOperator(proposition.op) + generatePropositionString(normName, nType, pType, proposition.right) 
 			PComparison: return generatePropositionString(normName, nType, pType, proposition.left) + proposition.op + generatePropositionString(normName, nType, pType, proposition.right)
+			PArithmetic: return generatePropositionString(normName, nType, pType, proposition.left) + proposition.op + generatePropositionString(normName, nType, pType, proposition.right)
 			PAtomRecursive: return "(" + generatePropositionString(normName, nType, pType, proposition.inner) + ")"
 			NegatedPAtom: return "!(" + generatePropositionString(normName, nType, pType, proposition.negated) + ")"
 			PAtomPredicate: return generatePredicateFunctionString(normName, nType, pType, proposition.predicateFunction)
@@ -1592,6 +1605,8 @@ class SymboleoPCGenerator extends SymboleoGenerator {
 			Multi: return generateExpressionString(argExpression.left, thisString) + " * " + generateExpressionString(argExpression.right, thisString)
 
 			Div: return generateExpressionString(argExpression.left, thisString) + " / " + generateExpressionString(argExpression.right, thisString)
+			
+			Mod: return generateExpressionString(argExpression.left, thisString) + " mod " + generateExpressionString(argExpression.right, thisString)
 
 			PrimaryExpressionRecursive: return "(" + generateExpressionString(argExpression.inner, thisString) + ")"
 
@@ -1620,12 +1635,31 @@ class SymboleoPCGenerator extends SymboleoGenerator {
 	override def String generateFunctionCall(PrimaryExpressionFunctionCall argFunctionCallExp, String thisString) {
 
 		val functionCall = argFunctionCallExp.function
-
+		
 		switch (functionCall) {
 
-			TwoArgMathFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," + generateExpressionString(functionCall.arg2, thisString) + ")"
+			TwoArgMathFunction:
+			// Handle Math.max function
+        	if(functionCall.name == "Math.max"){
+            	return '''(case «generateExpressionString(functionCall.arg1, thisString)» >= «generateExpressionString(functionCall.arg2, thisString)» : 
+                            «generateExpressionString(functionCall.arg1, thisString)»;
+                       TRUE : «generateExpressionString(functionCall.arg2, thisString)»;
+                       esac)'''
+             }
 
-			OneArgMathFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
+        	// Handle Math.min function
+        	else if(functionCall.name == "Math.min"){
+            	return '''(case «generateExpressionString(functionCall.arg1, thisString)» <= «generateExpressionString(functionCall.arg2, thisString)» : 
+                            «generateExpressionString(functionCall.arg1, thisString)»;
+                       TRUE : «generateExpressionString(functionCall.arg2, thisString)»;
+                       esac)'''
+             }
+        	// Handle Math.pow or other functions by replacing with 1 (safe fallback value)
+        	else{
+        		return "1"
+        	}
+
+			OneArgMathFunction: return generateExpressionString(functionCall.arg1, thisString)
 
 			TwoArgStringFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," + generateExpressionString(functionCall.arg2, thisString) + ")"
 
@@ -3008,6 +3042,8 @@ class SymboleoPCGenerator extends SymboleoGenerator {
 	        return generatePropositionAssignString(proposition.left, cond) + 
 	          generatePropositionAssignString(proposition.right, cond)
 	      PComparison:
+	        return generatePropositionAssignString(proposition.left, cond) +  generatePropositionAssignString(proposition.right, cond)
+	      PArithmetic:
 	        return generatePropositionAssignString(proposition.left, cond) +  generatePropositionAssignString(proposition.right, cond)
 	      PAtomRecursive:
 	        return generatePropositionAssignString(proposition.inner, cond) 

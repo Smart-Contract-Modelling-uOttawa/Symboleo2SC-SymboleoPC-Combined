@@ -65,8 +65,8 @@ Variable:
 // Assign should be used for ENV parameters or parameters of the contract. any variable initiate in the declaration are 
 //can not be used because the initial value will be assigned to the variable each time you trigger any events.
 OAssignment:
-	{OAssignExpression} name2= VariableDotExpression op=":=" (value=Expression);
-	
+	{OAssignExpression} name2=VariableDotExpression op=":=" (value=Expression);
+
 VariableDotExpression returns Ref:
 	VariableRef ({VariableDotExpression.ref=current} "." tail=[Attribute])*;
 
@@ -80,7 +80,7 @@ Double returns ecore::EDouble:
 	INT '.' INT;
 
 Date returns ecore::EDate:
-  'Date' '(' STRING ')';
+	'Date' '(' STRING ')';
 
 Expression: Or;
 
@@ -100,7 +100,7 @@ Addition returns Expression:
 	Multiplication (({Plus.left=current} '+' | {Minus.left=current} '-') right=Multiplication)*;
 
 Multiplication returns Expression:
-	PrimaryExpression (({Multi.left=current} '*' | {Div.left=current} '/') right=PrimaryExpression)*;
+	PrimaryExpression (({Multi.left=current} '*' | {Div.left=current} '/' | {Mod.left=current} '%') right=PrimaryExpression)*;
 
 PrimaryExpression returns Expression:
 	{PrimaryExpressionRecursive} '(' inner=Expression ')' |
@@ -123,17 +123,19 @@ AtomicExpression returns Expression:
 FunctionCall:
 	MathFunction | StringFunction | DateFunction
 ;
+
 MathFunction returns FunctionCall:
-  {TwoArgMathFunction} name=('Math.pow') '(' arg1=Expression ',' arg2=Expression ')' |
-  {OneArgMathFunction} name=('Math.abs'|'Math.floor'|'Math.cbrt'
-    |'Math.ceil'|'Math.exp'|'Math.sign'|'Math.sqrt'
-  ) '(' arg1=Expression ')';
+	{TwoArgMathFunction} name=('Math.pow' | 'Math.max' | 'Math.min') '(' arg1=Expression ',' arg2=Expression ')' |
+	{OneArgMathFunction} name=('Math.abs' | 'Math.floor' | 'Math.cbrt'
+	| 'Math.ceil' | 'Math.exp' | 'Math.sign' | 'Math.sqrt') '(' arg1=Expression ')';
 
 StringFunction returns FunctionCall:
-  {ThreeArgStringFunction} name=('String.substring'|'String.replaceAll') '(' arg1=Expression ',' arg2=Expression ',' arg3=Expression ')' |
-  {TwoArgStringFunction} name=('String.concat') '(' arg1=Expression ',' arg2=Expression ')' |
-  {OneArgStringFunction} name=('String.toLowerCase'|'String.toUpperCase'|'String.trimEnd'|'String.trimStart'|'String.trim') '(' arg1=Expression ')';
-	
+	{ThreeArgStringFunction} name=('String.substring' | 'String.replaceAll') '(' arg1=Expression ',' arg2=Expression ','
+	arg3=Expression ')' |
+	{TwoArgStringFunction} name=('String.concat') '(' arg1=Expression ',' arg2=Expression ')' |
+	{OneArgStringFunction} name=('String.toLowerCase' | 'String.toUpperCase' | 'String.trimEnd' | 'String.trimStart' |
+	'String.trim') '(' arg1=Expression ')';
+
 DateFunction returns FunctionCall:
 	{ThreeArgDateFunction} name='Date.add' '(' arg1=Expression ',' value=Expression ',' timeUnit=TimeUnit  ')' 
 ;
@@ -143,7 +145,7 @@ Obligation:
 
 Power:
 	name=ID ':' (trigger=Proposition '->')? ('P' | 'Power') '(' creditor=VariableDotExpression ',' debtor=VariableDotExpression ',' antecedent=Proposition ',' consequent=PowerFunction ')';
-	
+
 PowerFunction returns PowerFunction:
 	{PFObligationSuspended} action = 'Suspended' '(' 'obligations.' norm = [Obligation] ')' | 
 	{PFObligationResumed} action = 'Resumed' '(' 'obligations.' norm = [Obligation] ')' | 
@@ -169,53 +171,52 @@ PEquality returns Proposition:
 	PComparison ({PEquality.left=current} op=("==" | "!=") right=PComparison)*;
 
 PComparison returns Proposition:
-	PAtomicExpression ({PComparison.left=current} op=(">=" | "<=" | ">" | "<") right=PAtomicExpression)*;
+	PArithmetic ({PComparison.left=current} op=(">=" | "<=" | ">" | "<") right=PArithmetic)*;
+
+PArithmetic returns Proposition:
+    PAtomicExpression ({PArithmetic.left=current} op=("+" | "-" | "*" | "/" | "%") right=PAtomicExpression)*;
 
 PAtomicExpression returns Proposition:
 	{PAtomRecursive} '(' inner=Proposition ')' |
 	{NegatedPAtom} 'not' negated=PAtomicExpression |
 	{PAtomPredicate} predicateFunction=PredicateFunction |
 	{PAtomFunction} function=OtherFunction |
-  {PAtomEnum} enumeration=[Enumeration]"("enumItem=[EnumItem]")" |
+	{PAtomEnum} enumeration=[Enumeration]"("enumItem=[EnumItem]")" |
 	{PAtomVariable} variable=VariableDotExpression |
 	{PAtomPredicateTrueLiteral} value='true' |
 	{PAtomPredicateFalseLiteral} value='false' |
 	{PAtomDoubleLiteral} value=Double |
 	{PAtomIntLiteral} value=INT |
 	{PAtomStringLiteral} value=STRING |
-	{PAtomDateLiteral} value= Date
-	;
+	{PAtomDateLiteral} value= Date;
 
 PredicateFunction:
 	{PredicateFunctionHappens} name='Happens' '(' event=Event ')' |
 	{PredicateFunctionWHappensBefore} name='WhappensBefore' '(' event=Event ',' point=Point ')' |
 	{PredicateFunctionSHappensBefore} name='ShappensBefore' '(' event=Event ',' point=Point ')' |
-	{PredicateFunctionHappensWithin} name='HappensWithin' '(' event=Event ',' interval=Interval ')'|
+	{PredicateFunctionHappensWithin} name='HappensWithin' '(' event=Event ',' interval=Interval ')' |
 	{PredicateFunctionWHappensBeforeEvent} name='WhappensBeforeE' '(' event1=Event ',' event2=Event ')' |
 	{PredicateFunctionSHappensBeforeEvent} name='ShappensBeforeE' '(' event1=Event ',' event2=Event ')' |
 	{PredicateFunctionHappensAfter} name='HappensAfter' '(' event=Event ',' point=Point ')' |
 	{PredicateFunctionOccurs} name='Occurs' '(' situation=Situation ',' interval=Interval ')' |
-	{PredicateFunctionAssignment} name='HappensAssign' '(' event=Event ',' (assignment+=OAssignment (';' assignment+=OAssignment )*)?')' |
-	{PredicateFunctionAssignmentOnly} name='Assign' '(' (assignment+=OAssignment (';' assignment+=OAssignment )*)?')'
-		;                                              //('with' attributes+=Assignment (',' attributes+=Assignment)*)?;
-	//{PredicateFunctionAssignmentOnly} name='Assign' '(' (assignment+=OAssignment)* (';' assignment+=OAssignment )?')'
+	{PredicateFunctionAssignment} name='HappensAssign' '(' event=Event ',' (assignment+=OAssignment (';'
+	assignment+=OAssignment)*)?')' |
+	{PredicateFunctionAssignmentOnly} name='Assign' '(' (assignment+=OAssignment (';' assignment+=OAssignment)*)?')'; // ('with' attributes+=Assignment (',' attributes+=Assignment)*)?;
+// {PredicateFunctionAssignmentOnly} name='Assign' '(' (assignment+=OAssignment)* (';' assignment+=OAssignment )?')'
+
 OtherFunction:
-  {PredicateFunctionIsEqual} name='IsEqual' '(' arg1=ID ',' arg2=ID ')' |
-  {PredicateFunctionIsOwner} name='IsOwner' '(' arg1=ID ',' arg2=ID ')' |
-  {PredicateFunctionCannotBeAssigned} name='CannotBeAssigned' '(' arg1=ID ')'
-  ;
-  
+	{PredicateFunctionIsEqual} name='IsEqual' '(' arg1=ID ',' arg2=ID ')' |
+	{PredicateFunctionIsOwner} name='IsOwner' '(' arg1=ID ',' arg2=ID ')' |
+	{PredicateFunctionCannotBeAssigned} name='CannotBeAssigned' '(' arg1=ID ')';
+
 Event:
 	VariableEvent |
 	ObligationEvent |
 	ContractEvent |
 	PowerEvent;
-	
 
-	
 VariableEvent returns Event:
-	{VariableEvent} variable=VariableDotExpression
-;
+	{VariableEvent} variable=VariableDotExpression;
 
 PowerEvent returns Event:
 	{PowerEvent} eventName=PowerEventName '(' 'powers.' powerVariable=[Power] ')';
@@ -253,7 +254,7 @@ PointAtom returns PointExpression:
 	{PointAtomObligationEvent} obligationEvent=ObligationEvent |
 	{PointAtomContractEvent} contractEvent=ContractEvent |
 	{PointAtomPowerEvent} powerEvent=PowerEvent;
-
+	
 
 Timevalue:
 	{TimevalueInt} value=INT |
@@ -292,4 +293,3 @@ ContractState:
 
 ContractStateName:
 	'Form' | 'UnAssign' | 'InEffect' | 'Suspension' | 'Rescission' | 'SuccessfulTermination' | 'UnsuccessfulTermination' | 'Active';
-  

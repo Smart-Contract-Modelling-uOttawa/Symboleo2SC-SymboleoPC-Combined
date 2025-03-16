@@ -22,6 +22,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.AttributeModifier;
 import ca.uottawa.csmlab.symboleo.symboleo.BaseType;
 import ca.uottawa.csmlab.symboleo.symboleo.DomainType;
 import ca.uottawa.csmlab.symboleo.symboleo.Event;
+import ca.uottawa.csmlab.symboleo.symboleo.FunctionCall;
 import ca.uottawa.csmlab.symboleo.symboleo.Model;
 import ca.uottawa.csmlab.symboleo.symboleo.Obligation;
 import ca.uottawa.csmlab.symboleo.symboleo.OneArgMathFunction;
@@ -446,6 +447,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
       error("First argument of '" + function.getName() + "' should be a Number.", function,
           SymboleoPackage.Literals.FUNCTION_CALL__ARG1);
     }
+    warnUnsupportedFunction(function);
   }
 
   /*
@@ -473,6 +475,10 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
       error("Second argument of '" + function.getName() + "' should be a Number.", function,
           SymboleoPackage.Literals.TWO_ARG_MATH_FUNCTION__ARG2);
     }
+    //Only warn if the function is Math.pow 
+    if(function.getName().equals("Math.pow")){
+    	warnUnsupportedFunction(function);
+    }
   }
 
   /*
@@ -488,9 +494,10 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
       error(typeRes.message, typeRes.error, typeRes.ref);
     }
     if (!typeRes.type.equals("String")) {
-      error("First argument of '" + function.getName() + "' should be a Number.", function,
+      error("First argument of '" + function.getName() + "' should be a String.", function,
           SymboleoPackage.Literals.FUNCTION_CALL__ARG1);
     }
+    warnUnsupportedFunction(function);
   }
 
   /*
@@ -518,6 +525,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
       error("Second argument of '" + function.getName() + "' should be a String.", function,
           SymboleoPackage.Literals.TWO_ARG_STRING_FUNCTION__ARG2);
     }
+    warnUnsupportedFunction(function);
   }
 
   /*
@@ -568,6 +576,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
             SymboleoPackage.Literals.THREE_ARG_STRING_FUNCTION__ARG3);
       }
     }
+    warnUnsupportedFunction(function);
   }
 
   /*
@@ -622,6 +631,11 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
       error("Only variable of type Event is allowed", event, SymboleoPackage.Literals.VARIABLE_EVENT__VARIABLE);
     }
   }
+  
+  private void warnUnsupportedFunction(FunctionCall function) {
+	    warning("Warning: Function '" + function.getName() + "' is not supported in nuXmv. Skipping it in the .smv file.", 
+	            function, SymboleoPackage.Literals.FUNCTION_CALL__ARG1);
+	}
 }
 
 // warning about common keywords of Java, js , etc
