@@ -56,6 +56,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.PAtomPredicate
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomEnum
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomRecursive
 import ca.uottawa.csmlab.symboleo.symboleo.PComparison
+import ca.uottawa.csmlab.symboleo.symboleo.PArithmetic
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomVariable
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomPredicateTrueLiteral
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomPredicateFalseLiteral
@@ -112,6 +113,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.PFObligationTriggered
 import ca.uottawa.csmlab.symboleo.symboleo.Assignment
 import ca.uottawa.csmlab.symboleo.symboleo.OAssignment
 import ca.uottawa.csmlab.symboleo.generator.SymboleoGenerator
+import ca.uottawa.csmlab.symboleo.symboleo.Mod
 
 //
 /**
@@ -1197,6 +1199,9 @@ class Symboleo2SC extends SymboleoGenerator {
       Div:
         return generateExpressionString(argExpression.left, thisString) + " / " +
           generateExpressionString(argExpression.right, thisString)
+      Mod:
+        return generateExpressionString(argExpression.left, thisString) + " % " +
+          generateExpressionString(argExpression.right, thisString)
       PrimaryExpressionRecursive:
         return "(" + generateExpressionString(argExpression.inner, thisString) + ")"
       PrimaryExpressionFunctionCall:
@@ -1330,6 +1335,9 @@ class Symboleo2SC extends SymboleoGenerator {
         return generatePropositionString(proposition.left) + getEqualityOperator(proposition.op) +
           generatePropositionString(proposition.right)
       PComparison:
+         return generatePropositionString(proposition.left) + ' ' + proposition.op + ' ' +
+          generatePropositionString(proposition.right)
+      PArithmetic:
          return generatePropositionString(proposition.left) + ' ' + proposition.op + ' ' +
           generatePropositionString(proposition.right)
       PAtomRecursive:

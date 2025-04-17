@@ -30,6 +30,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.Plus
 import ca.uottawa.csmlab.symboleo.symboleo.Minus
 import ca.uottawa.csmlab.symboleo.symboleo.Div
 import ca.uottawa.csmlab.symboleo.symboleo.Multi
+import ca.uottawa.csmlab.symboleo.symboleo.Mod
 import ca.uottawa.csmlab.symboleo.symboleo.PrimaryExpressionFunctionCall
 import ca.uottawa.csmlab.symboleo.symboleo.NegatedPrimaryExpression
 import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionTrue
@@ -56,6 +57,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.PAtomPredicate
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomEnum
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomRecursive
 import ca.uottawa.csmlab.symboleo.symboleo.PComparison
+import ca.uottawa.csmlab.symboleo.symboleo.PArithmetic
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomVariable
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomPredicateTrueLiteral
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomPredicateFalseLiteral
@@ -328,6 +330,11 @@ import ca.uottawa.csmlab.symboleo.symboleo.OAssignment
         list.addAll(collectPropositionEvents(proposition.negated))
       PAtomPredicate:
       	if (!(proposition.predicateFunction instanceof PredicateFunctionAssignmentOnly)){ list.add(proposition)}
+      PArithmetic: {
+      	list.addAll(collectPropositionEvents(proposition.left))
+        list.addAll(collectPropositionEvents(proposition.right))
+      }
+      	
       }
     return list
   }
@@ -350,6 +357,8 @@ import ca.uottawa.csmlab.symboleo.symboleo.OAssignment
         return generatePropositionAssignString(proposition.negated) 
       PAtomPredicate:
         return generatePredicateAssignString(proposition.predicateFunction)
+      PArithmetic:
+        return generatePropositionAssignString(proposition.left) +  generatePropositionAssignString(proposition.right)
       default : return " "
     }
   }
@@ -474,6 +483,9 @@ import ca.uottawa.csmlab.symboleo.symboleo.OAssignment
       Div:
         return generateExpressionString(argExpression.left, thisString) + " / " +
           generateExpressionString(argExpression.right, thisString)
+      Mod:
+        return generateExpressionString(argExpression.left, thisString) + " % " +
+          generateExpressionString(argExpression.right, thisString)
       PrimaryExpressionRecursive:
         return "(" + generateExpressionString(argExpression.inner, thisString) + ")"
       PrimaryExpressionFunctionCall:
@@ -541,15 +553,6 @@ import ca.uottawa.csmlab.symboleo.symboleo.OAssignment
     }
   }
 
-   def String OpString(String op) {
-    switch (op) {
-      case ":=":  return ' = '
-  	   case "+:=": return " += "
-  	   case "-:=": return " -= "
-  	    case "*:=": return " *= "
-  	    case "/:=": return " /= "
-    }
-  }
 	 def boolean isSurvivingObligation (String name) {
 	    for (obligation: allObligations){
 	      if(obligation.name.equals(name)){
