@@ -14,12 +14,14 @@ import org.eclipse.xtext.validation.CheckType;
 
 import ca.uottawa.csmlab.symboleo.Helpers;
 import ca.uottawa.csmlab.symboleo.ResolveExpressionResult;
+import ca.uottawa.csmlab.symboleo.symboleo.ACPolicy;
 import ca.uottawa.csmlab.symboleo.symboleo.AssignExpression;
 //import ca.uottawa.csmlab.symboleo.symboleo.AssignVariable;
 import ca.uottawa.csmlab.symboleo.symboleo.Assignment;
 import ca.uottawa.csmlab.symboleo.symboleo.Attribute;
 import ca.uottawa.csmlab.symboleo.symboleo.AttributeModifier;
 import ca.uottawa.csmlab.symboleo.symboleo.BaseType;
+import ca.uottawa.csmlab.symboleo.symboleo.Controller;
 import ca.uottawa.csmlab.symboleo.symboleo.DomainType;
 import ca.uottawa.csmlab.symboleo.symboleo.Event;
 import ca.uottawa.csmlab.symboleo.symboleo.FunctionCall;
@@ -33,6 +35,8 @@ import ca.uottawa.csmlab.symboleo.symboleo.ParameterType;
 import ca.uottawa.csmlab.symboleo.symboleo.Power;
 import ca.uottawa.csmlab.symboleo.symboleo.Ref;
 import ca.uottawa.csmlab.symboleo.symboleo.RegularType;
+import ca.uottawa.csmlab.symboleo.symboleo.Resource;
+import ca.uottawa.csmlab.symboleo.symboleo.Rule;
 import ca.uottawa.csmlab.symboleo.symboleo.SymboleoPackage;
 import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgDateFunction;
 import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgStringFunction;
@@ -86,7 +90,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
   @Check(CheckType.FAST)
   public void checkPowersStartWithLowerCase(Power o) {
     if (!Character.isLowerCase(o.getName().charAt(0))) {
-      error("Power name should start with a lowercase letter", o, SymboleoPackage.Literals.POWER__NAME);
+      error("Power name should start no valuable input a lowercase letter", o, SymboleoPackage.Literals.POWER__NAME);
     }
   }
 
@@ -167,11 +171,12 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
   /*
    * Check that Env is only used for Event types
    */
+  //AC-we added DataTransfer here as a special kind of event that use Env
   @Check(CheckType.FAST)
   public void checkEnvUsageIsValid(DomainType type) {
     if (type instanceof RegularType) {
       // check that base type is Event
-      boolean isEvent = Helpers.getBaseType(type).getOntologyType().getName().equalsIgnoreCase("Event");
+      boolean isEvent = Helpers.getBaseType(type).getOntologyType().getName().equalsIgnoreCase("Event") || Helpers.getBaseType(type).getOntologyType().getName().equalsIgnoreCase("DataTransfer") ;
       for (Attribute atr : ((RegularType) type).getAttributes()) {
         if (atr.getAttributeModifier() != null) {
           AttributeModifier mod = atr.getAttributeModifier();
@@ -189,7 +194,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
    * check that variable initiations are valid
    */
   @Check(CheckType.FAST)
-  public void checkInitiationsAreValid(Variable var) {
+  public void checkInitializationsAreValid(Variable var) {
     RegularType type = var.getType();
 
     // get list of assignments
@@ -204,11 +209,11 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
         // Env values shall not be set
         if (mod.getName().equalsIgnoreCase("Env") && isInitiated) {
           error("Env attribute '" + ((AssignExpression) res.get()).getName() + "' in " + type.getName()
-              + " shall not be initiated.", res.get(), SymboleoPackage.Literals.ASSIGN_EXPRESSION__NAME);
+              + " shall not be initialized.", res.get(), SymboleoPackage.Literals.ASSIGN_EXPRESSION__NAME);
         }
       } else if (!isInitiated && !atr.getName().equalsIgnoreCase("_timestamp")) {
         // all other attributes should be initiated
-        error("Attribute '" + atr.getName() + "' is not initiated in variable '" + var.getName() + "'. ", var,
+        error("Attribute '" + atr.getName() + "' is not initialized in variable '" + var.getName() + "'. ", var,
             SymboleoPackage.Literals.VARIABLE__ATTRIBUTES);
       }
     }
@@ -614,6 +619,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
   /*
    * only variables of type Event shall be used inside VariableEvent
    */
+  //AC-we added DataTransfer here as a special kind of event that use Env
   @Check(CheckType.FAST)
   public void checkVariableEventsType(VariableEvent event) {
     // get type of VariableDotExpression
@@ -627,16 +633,253 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
     RegularType type = Helpers.getBaseType(dt);
     if (type == null) {
       error("Only variable of type Event is allowed", event, SymboleoPackage.Literals.VARIABLE_EVENT__VARIABLE);
-    } else if (!type.getOntologyType().getName().equalsIgnoreCase("event")) {
+    } else if (!(type.getOntologyType().getName().equalsIgnoreCase("event") || type.getOntologyType().getName().equalsIgnoreCase("datatransfer") )) {
       error("Only variable of type Event is allowed", event, SymboleoPackage.Literals.VARIABLE_EVENT__VARIABLE);
     }
   }
-  
+
   private void warnUnsupportedFunction(FunctionCall function) {
-	    warning("Warning: Function '" + function.getName() + "' is not supported in nuXmv. Skipping it in the .smv file.", 
-	            function, SymboleoPackage.Literals.FUNCTION_CALL__ARG1);
-	}
-}
+    warning("Warning: Function '" + function.getName() + "' is not supported in nuXmv. Skipping it in the .smv file.",
+            function, SymboleoPackage.Literals.FUNCTION_CALL__ARG1);
+  }
+  
+  /*
+   *  Symboleo ACPolicy Validation Rule
+   ********************************************************************************/
+
+
+  /*
+   * check type of accessedRole and controller(by) in each Rule
+   */
+  @Check(CheckType.FAST)
+  public void checkAccessedRoleAndControllerInRule(Model model) {
+    // loop over rules
+    for (Rule rule : model.getRules()) {
+      // check accessedRole type
+      EObject accessedRoleType = Helpers.getDotExpressionType(rule.getAccessedRole(), model.getVariables(), model.getParameters());
+      // get the parameter type if it is a parameter
+      if (accessedRoleType instanceof ParameterType && ((ParameterType) accessedRoleType).getDomainType() != null) {
+    	  accessedRoleType = ((ParameterType) accessedRoleType).getDomainType();
+      }
+      if (accessedRoleType instanceof DomainType) {
+        // error if it is not a Role
+        RegularType base = Helpers.getBaseType((DomainType) accessedRoleType);
+        if (base == null || base != null && !base.getOntologyType().getName().equals("Role")) {
+          error("accessedRole value in '" + rule.getName() + "' is not type of Role.'", rule,
+              SymboleoPackage.Literals.RULE__ACCESSED_ROLE);
+        }
+      } else {
+        error("accessedRole value in '" + rule.getName() + "' is not type of Role.'", rule,
+            SymboleoPackage.Literals.RULE__ACCESSED_ROLE);
+      }
+
+      // check controller type
+      EObject controllerType = Helpers.getDotExpressionType(rule.getController(), model.getVariables(), model.getParameters());
+      // get the parameter type if it is a parameter
+      if (controllerType instanceof ParameterType && ((ParameterType) controllerType).getDomainType() != null) {
+    	  controllerType = ((ParameterType) controllerType).getDomainType();
+      }
+      if (controllerType instanceof DomainType) {
+        // error if it is not a Role
+        RegularType base = Helpers.getBaseType((DomainType) controllerType);
+        if (base == null || base != null && !base.getOntologyType().getName().equals("Role")) {
+          error("controller value in '" + rule.getName() + "' is not type of Role.'", rule,
+              SymboleoPackage.Literals.RULE__CONTROLLER);
+        } else{///////////////////////////////////////////////////////////////////////****************************************************
+        	/*
+        	  if (rule.getAccessedResource() instanceof Resource) {
+    		    List<Attribute> attributes = Helpers.getAttributesOfRegularType((RegularType) modelType);
+    		    Resource resource = (Resource) rule.getAccessedResource();
+      		    Ref lastRef = getLastRef(resource);
+
+      		    if (lastRef instanceof VariableRef) {
+      		        VariableRef variableRef = (VariableRef) lastRef;
+      		        Variable variable = findVariable(variableRef.getVariable());
+      		        List<Attribute> attributes = Helpers.getAttributesOfRegularType((RegularType) modelType);
+
+
+      		        if (variable != null) {
+      		            for (Assignment assignment : variable.getAttributes()) {
+      		                if (assignment.getName().equals("owner") || assignment.name.equals("controller") || assignment.name.equals("performer")) {
+      		                    if (assignment.value.equals(rule.controller)) {
+      		                        // Valid rule
+      		                      error("controller value in '" + rule.getName() + "' Valid'", rule,
+      		                            SymboleoPackage.Literals.RULE__CONTROLLER);
+
+      		                    }
+      		                }
+      		            }
+      		            // None of the attributes match the controller role
+      		          error("controller value in '" + rule.getName() + "' Error: No matching attribute found for the controller role'", rule,
+		                          SymboleoPackage.Literals.RULE__CONTROLLER);
+      		        } else {
+      		        	error("controller value in '" + rule.getName() + "' Error: Variable not found'", rule,
+		                          SymboleoPackage.Literals.RULE__CONTROLLER);
+      		        }
+      		    } else {
+      		    	error("controller value in '" + rule.getName() + "' Error: Invalid accessed resource'", rule,
+	                          SymboleoPackage.Literals.RULE__CONTROLLER);
+      		    }
+      		} else {
+      			error("controller value in '" + rule.getName() + "' Error: Invalid accessed resource type'", rule,
+                        SymboleoPackage.Literals.RULE__CONTROLLER);
+      		}
+      		*/
+        	//////////////////////////////////////////////////////////////////////////*****************************************************
+        }
+      } else {
+        error("controller value in '" + rule.getName() + "' is not type of Role.'", rule,
+            SymboleoPackage.Literals.RULE__CONTROLLER);
+      }
+    }// end for loop
+  }// end function
+
+  /*
+   * check type of list of controller for ACPolicy
+   */
+  @Check(CheckType.FAST)
+  public void checkControllerType(Model model) {
+	  ACPolicy acpolicy = model.getAcpolicys();
+    for (Controller controller : acpolicy.getController()) {
+    	 Ref controllerType = controller.getControllerType();
+    	 //System.out.println("before first if from dot expersstion" + controllerType);
+      if (controllerType != null) {
+        EObject resolvedType = Helpers.getDotExpressionType(controllerType, model.getVariables(), model.getParameters());
+        //System.out.println("after first if from dot expersstion" + resolvedType);
+        if (resolvedType instanceof ParameterType && ((ParameterType) resolvedType).getDomainType() != null) {
+      	  //System.out.println("after first if from prameter type");
+        	resolvedType = ((ParameterType) resolvedType).getDomainType();
+      	  //System.out.println("after resolvetype in parameteer" + resolvedType);
+        }
+        if (resolvedType instanceof DomainType) {
+        	//System.out.println("after domain type if" + resolvedType);
+          RegularType baseType = Helpers.getBaseType((DomainType) resolvedType);
+          //System.out.println("after RegularType type if" + baseType);
+          if (baseType == null || baseType != null && !baseType.getOntologyType().getName().equals("Role")) {
+            error("Controller must be of type 'Role'.", controller,
+            		SymboleoPackage.Literals.CONTROLLER__CONTROLLER_TYPE);
+          }
+        } else {
+          error("Controller must be of type 'Role'.", controller,
+        		  SymboleoPackage.Literals.CONTROLLER__CONTROLLER_TYPE);
+        }
+      }
+    }
+  }
+
+  /*
+   * Identifiers should be unique
+   */
+  /*
+  @Check(CheckType.FAST)
+  public void checkIdentifiersAreUnique3(Model model) {
+
+    Set<String> identifiers = new HashSet<>();
+
+    for (Rule x : model.getRules()) {
+      if (identifiers.contains(x.getName())) {
+        error("Duplicate identifier " + x.getName(), x, SymboleoPackage.Literals.RULE__NAME);
+      }
+      identifiers.add(x.getName());
+    }
+
+  }*/
+
+  //(1) check the resource type (after on) if it is variables or a attribute to get the attributes of the variables
+  //(2) check the attributes that we get searching for the attributes with owner, controller, or performer.
+  //(3) If the value of one of them equals after "by" role, then it is valid. otherwise error.
+
+  /*
+   *
+   */
+  /*
+  @Check(CheckType.FAST)
+  public void checkPermesstionGiverOfEachResource(Model model) {
+
+  }*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  /*
+   * check type of list of controller for ACPolicy
+   */
+  /*
+  @Check(CheckType.FAST)
+  public void checkControllerInACPolicy(Model model) {
+    // loop over acpolicy
+	ACPolicy acpolicy = model.getAcpolicys();
+    for (Controller controller : acpolicy.getController() ) {
+      // check role type ACPolicy controller
+      EObject controllerType = Helpers.getDotExpressionType(controller.getControllerType(),model.getVariables(), model.getParameters());
+      //System.out.println("after return from dot expersstion" + controller);
+      // get the parameter type if it is a parameter
+      if (controllerType instanceof ParameterType && ((ParameterType) controllerType).getDomainType() != null) {
+    	  //System.out.println("after first if from dot expersstion");
+    	  controllerType = ((ParameterType) controllerType).getDomainType();
+    	  //System.out.println("after controllerType in first if from dot expersstion");
+      }
+      if (controllerType instanceof DomainType) {
+    	  //System.out.println("after second if from dot expersstion");
+        // error if it is not a Role
+        RegularType base = Helpers.getBaseType((DomainType) controllerType);
+        //System.out.println("after RegularType in seond if from dot expersstion" + base.getName()  );
+        //if (base.getOntologyType().getName().equals("Role")) {
+        //	System.out.println("it is a Role");
+        //}
+        if (base == null || base != null && !base.getOntologyType().getName().equals("Role")) {
+        	//System.out.println("after third if from dot expersstion");
+          error(" ACPolicy controller value in '" + controller.getName() + "' is not type of Role.'", controller,
+              SymboleoPackage.Literals.CONTROLLER__CONTROLLER_TYPE);
+        }
+      } else {
+    	  //System.out.println("inside else of seond if from dot expersstion");
+        error(" ACPolicy controller value in '" + controller.getName()  + "' is not type of Role.'", controller,
+            SymboleoPackage.Literals.CONTROLLER__CONTROLLER_TYPE);
+      }
+
+    }// end for loop
+  }// end function
+*/
+  //error(" ACPolicy controller value in '" + name.substring(name.indexOf("variable:")+9, name.indexOf(")")) + "' is not type of Role.'", acpolicy, SymboleoPackage.Literals.AC_POLICY__CONTROLLER);
+  //  error(" ACPolicy controller value in '" + acpolicy.getController().get(indexController) + "' is not type of Role.'", acpolicy,SymboleoPackage.Literals.AC_POLICY__CONTROLLER);
+
+
+
+}// end of the class
 
 // warning about common keywords of Java, js , etc
 // Role, Asset, Event, when, for foreach while if else function __prototype 
@@ -644,3 +887,6 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
 // env vars should not be used in variables
 // model inheritance should not have cycles
 // variables used in expressions should not have cycles
+
+
+
