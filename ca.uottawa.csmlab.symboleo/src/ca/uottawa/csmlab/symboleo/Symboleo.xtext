@@ -15,7 +15,6 @@ Model:
 	('Obligations' (obligations+=Obligation ';')*)+
 	('Surviving' 'Obligations' (survivingObligations+=Obligation ';')*)?
 	('Powers' (powers+=Power ';')*)?
-	('ACPolicy'  acpolicys=ACPolicy (rules+=Rule ';')*)? //AC
 	('Constraints' (constraints+=Proposition ';')*)?
 	'endContract';
 
@@ -32,128 +31,19 @@ EnumItem:
 	name=ID;
 
 // TODO not extend itself, prevent cycles
-//AC-- here I added operation
-//AC-- Added if a Role is a contracting party as well
-/*
 RegularType:
-	name=ID ('isA' | 'isAn') ontologyType=OntologyType (thirdParty=ThirdParty)? ('with' (attributes+=Attribute ',')* (attributes+=Attribute))? ('Operation' '('operations+=Operation ',')* (operations+=Operation)')'? |
-	name=ID ('isA' | 'isAn') regularType=[RegularType] ('with' (attributes+=Attribute ',')* (attributes+=Attribute))? ('Operation' '('operations+=Operation ',')* (operations+=Operation)')'? |
-	name=ID ('isA' | 'isAn') aResource=AResource  ('with' (attributes+=Attribute ',')* (attributes+=Attribute))? ('Operation' '('operations+=Operation ',')* (operations+=Operation)')'?;
-*/
-RegularType:
-	name=ID ('isA' | 'isAn') ontologyType=OntologyType (thirdParty=ThirdParty)? ('with' (attributes+=Attribute ',')* (attributes+=Attribute))? |
-	name=ID ('isA' | 'isAn') regularType=[RegularType] ('with' (attributes+=Attribute ',')* (attributes+=Attribute))? |
-	name=ID ('isA' | 'isAn') aResource=AResource  ('with' (attributes+=Attribute ',')* (attributes+=Attribute))?
-	;
+	name=ID ('isA' | 'isAn') ontologyType=OntologyType ('with' (attributes+=Attribute ',')* (attributes+=Attribute))? |
+	name=ID ('isA' | 'isAn') regularType=[RegularType] ('with' (attributes+=Attribute ',')* (attributes+=Attribute))?;
 
 Attribute:
 	attributeModifier=AttributeModifier? name=ID ':' baseType=BaseType |
 	attributeModifier=AttributeModifier? name=ID ':' domainType=[DomainType];
 
-
-//AC - user added/defined operation
-//Operation:
-	//name=ID  ('(' (parameters+=Parameter (',' parameters+=Parameter)*)? ')' ':' baseType=BaseType) |
-	//('(' (parameters+=Parameter (',' parameters+=Parameter)*)? ')' ':' domainType=[DomainType])
-//;
-
-//AC
-Operation:
-   name=ID  '(' (parameters+=Parameter (',' parameters+=Parameter)*)? ')'
-   ':' returnType=ReturnType
-    ('precondition' precondition=Condition)?
-    ('postcondition' postcondition=Condition)?;
-
-//AC
-ReturnType:
-    type=ParameterType;
-
-//AC
-Condition:
-    {Condition}
-    condition=Expression;
-
-//user added/defined operation
-
 BaseType:
 	name=("Number" | "String" | "Date" | "Boolean");
 
-
 OntologyType:
-	name=("Asset" | "Event" | "Role" | "Contract" | "DataTransfer" ); //
-
-//AC
-AResource:
-	name="Resource"
-;
-
-//AC
-//Resource:
-	//Obligation |
-	//Power |
-	//OntologyType |
-	//ACPolicy
-
-//;
-
-//AC
-/*
- * ACPolicy:
-	name=ID ('with' (controller+=Controller ',')*)?
-	;
- */
-//AC
-ACPolicy:
-	 ('with' 'Controller' (controller+=Controller ',')* (controller+=Controller))
-	;
-
-
-//AC
-Controller:
-    controllerType=VariableDotExpression;
-
-
-//AC
-//accessedResource attribute or resource, attribute is not part of class resource
-Rule:
-	name=ID ':'  (('Grant' | 'Revoke') permission=Permission 'To' accessedRole=VariableDotExpression 'On' accessedResource=Resource  'by' controller=VariableDotExpression)
-	 ;
-//|
-	//name=ID ':'  (action=Action permission= Permission 'To' accessedRole=VariableDotExpression 'On' 'obligations.' accessedResource = [Obligation] 'by' controller=VariableDotExpression)
-	//name=ID ':'  ('GRNAT' | 'REVOKE' per= Permission 'TO' role=OntologyType("Role") 'ON' accessedResource=PointAtom) |
-	//name=ID ':'  ('GRNAT' | 'REVOKE' per= Permission 'TO' role=OntologyType("Role") 'ON' accessedResource=OperationDotExpression)
-	//(VariableDotExpression | Resource )
-
-//AC
-Resource:
- 	{ResourceObligation} ('obligations.' resourceOp = [Obligation]) |
- 	{ResourcePower} ( 'powers.' resourcePo = [Power]) |
- 	{ResourceOntologyType} ( resourceOn = OntologyType) |
- 	{ResourceACPolicy} (resourceAc=ACPolicy)|
- 	{ResourceAttribute} (resourceAt=Attribute) |
- 	{ResourceDot} (resourceDot= VariableDotExpression)|
-	{ResourceOperation} (resourceOpe=Operation) //| {AResource} (aResource=AResource)
-;
-
-
-//AC
-OperationDotExpression returns Ref:
-	OperationRef ({OperationDotExpression.ref=current} "." tail=[Operation])*;
-
-//AC
-OperationRef returns Ref:
-	{OperationRef} operation=ID;
-
-//AC
-Permission:
-	name=('read' | 'write' | 'all' | 'transfer');
-
-
-//AC - To differentiate a third party role from a role (contracting party)
-ThirdParty:
-	name=('thirdParty');
-
-
+	name=("Asset" | "Event" | "Role" | "Contract");
 
 AttributeModifier:
 	name=('Env');
@@ -168,6 +58,15 @@ ParameterType:
 Variable:
 	name=ID ':' type=[RegularType] ('with' attributes+=Assignment (',' attributes+=Assignment)*)?;
 
+//Assignment:
+//	{AssignVariable} name=ID ':=' value=VariableDotExpression |
+//	AssignmentB;
+
+// Assign should be used for ENV parameters or parameters of the contract. any variable initiate in the declaration are 
+//can not be used because the initial value will be assigned to the variable each time you trigger any events.
+OAssignment:
+	{OAssignExpression} name2=VariableDotExpression op=":=" (value=Expression);
+
 VariableDotExpression returns Ref:
 	VariableRef ({VariableDotExpression.ref=current} "." tail=[Attribute])*;
 
@@ -175,30 +74,13 @@ VariableRef returns Ref:
 	{VariableRef} variable=ID;
 
 Assignment:
-	{AssignExpression} name=ID ":=" (value=Expression)
-	;
-
-
-//sum returns AssignExpression:
-// {AssignExpression} name=ID  op=":=" ({sum.left = current} (right=Expression))
- //;
-
-// Assign should be used for ENV parameters or parameters of the contract. any variable initiate in the declaration are
-//can not be used because the initial value will be assigned to the variable each time you trigger any events.
-OAssignment:
-	{OAssignExpression} name2= VariableDotExpression op=":=" (value=Expression);
-	// |
-	// Osum
-// ;
-// Osum returns OAssignExpression:
-//	{OAssignExpression} name2= VariableDotExpression op=":=" ({Osum.left= current} ('+' | '-' | '*' | '/') (right=Expression))
-//;
+	{AssignExpression} name=ID ':=' value=Expression;
 
 Double returns ecore::EDouble:
 	INT '.' INT;
 
 Date returns ecore::EDate:
-  'Date' '(' STRING ')';
+	'Date' '(' STRING ')';
 
 Expression: Or;
 
@@ -212,7 +94,7 @@ Equality returns Expression:
 	Comparison ({Equality.left=current} op=("==" | "!=") right=Comparison)*;
 
 Comparison returns Expression:
-	Addition ({Comparison.left=current} op=(">=" | "<=" | ">" | "<") right=Addition )*;
+	Addition ({Comparison.left=current} op=(">=" | "<=" | ">" | "<") right=Addition)*;
 
 Addition returns Expression:
 	Multiplication (({Plus.left=current} '+' | {Minus.left=current} '-') right=Multiplication)*;
@@ -239,7 +121,7 @@ AtomicExpression returns Expression:
 ;
 
 FunctionCall:
-	MathFunction | StringFunction | DateFunction //| UserFunction
+	MathFunction | StringFunction | DateFunction
 ;
 
 MathFunction returns FunctionCall:
@@ -248,21 +130,21 @@ MathFunction returns FunctionCall:
 	| 'Math.ceil' | 'Math.exp' | 'Math.sign' | 'Math.sqrt') '(' arg1=Expression ')';
 
 StringFunction returns FunctionCall:
-  {ThreeArgStringFunction} name=('String.substring'|'String.replaceAll') '(' arg1=Expression ',' arg2=Expression ',' arg3=Expression ')' |
-  {TwoArgStringFunction} name=('String.concat') '(' arg1=Expression ',' arg2=Expression ')' |
-  {OneArgStringFunction} name=('String.toLowerCase'|'String.toUpperCase'|'String.trimEnd'|'String.trimStart'|'String.trim') '(' arg1=Expression ')';
-
+	{ThreeArgStringFunction} name=('String.substring' | 'String.replaceAll') '(' arg1=Expression ',' arg2=Expression ','
+	arg3=Expression ')' |
+	{TwoArgStringFunction} name=('String.concat') '(' arg1=Expression ',' arg2=Expression ')' |
+	{OneArgStringFunction} name=('String.toLowerCase' | 'String.toUpperCase' | 'String.trimEnd' | 'String.trimStart' |
+	'String.trim') '(' arg1=Expression ')';
 
 DateFunction returns FunctionCall:
 	{ThreeArgDateFunction} name='Date.add' '(' arg1=Expression ',' value=Expression ',' timeUnit=TimeUnit  ')' 
 ;
 
 Obligation:
-	name=ID ':' (trigger=Proposition '->')? ('O' | 'Obligation') '(' debtor=VariableDotExpression ',' creditor=VariableDotExpression ',' antecedent=Proposition ',' consequent=Proposition ')' ('with' 'Controller' controller= VariableDotExpression)?;
-
+	name=ID ':' (trigger=Proposition '->')? ('O' | 'Obligation') '(' debtor=VariableDotExpression ',' creditor=VariableDotExpression ',' antecedent=Proposition ',' consequent=Proposition ')';
 
 Power:
-	name=ID ':' (trigger=Proposition '->')? ('P' | 'Power') '(' creditor=VariableDotExpression ',' debtor=VariableDotExpression ',' antecedent=Proposition ',' consequent=PowerFunction ')' ('with' 'Controller' controller= VariableDotExpression)?;
+	name=ID ':' (trigger=Proposition '->')? ('P' | 'Power') '(' creditor=VariableDotExpression ',' debtor=VariableDotExpression ',' antecedent=Proposition ',' consequent=PowerFunction ')';
 
 PowerFunction returns PowerFunction:
 	{PFObligationSuspended} action = 'Suspended' '(' 'obligations.' norm = [Obligation] ')' | 
@@ -309,18 +191,18 @@ PAtomicExpression returns Proposition:
 	{PAtomDateLiteral} value= Date;
 
 PredicateFunction:
-	{PredicateFunctionHappens} name='Happens' '(' event=Event')' |
-	//{PredicateFunctionHappensData} name='HappensData' '(' data=Event ')' |
+	{PredicateFunctionHappens} name='Happens' '(' event=Event ')' |
 	{PredicateFunctionWHappensBefore} name='WhappensBefore' '(' event=Event ',' point=Point ')' |
 	{PredicateFunctionSHappensBefore} name='ShappensBefore' '(' event=Event ',' point=Point ')' |
-	{PredicateFunctionHappensWithin} name='HappensWithin' '(' event=Event ',' interval=Interval ')'|
+	{PredicateFunctionHappensWithin} name='HappensWithin' '(' event=Event ',' interval=Interval ')' |
 	{PredicateFunctionWHappensBeforeEvent} name='WhappensBeforeE' '(' event1=Event ',' event2=Event ')' |
 	{PredicateFunctionSHappensBeforeEvent} name='ShappensBeforeE' '(' event1=Event ',' event2=Event ')' |
 	{PredicateFunctionHappensAfter} name='HappensAfter' '(' event=Event ',' point=Point ')' |
 	{PredicateFunctionOccurs} name='Occurs' '(' situation=Situation ',' interval=Interval ')' |
-	{PredicateFunctionAssignment} name='HappensAssign' '(' event=Event ',' (assignment+=OAssignment (';' assignment+=OAssignment )*)?')' |
-	{PredicateFunctionAssignmentOnly} name='Assign' '(' (assignment+=OAssignment (';' assignment+=OAssignment )*)?')'
-		;
+	{PredicateFunctionAssignment} name='HappensAssign' '(' event=Event ',' (assignment+=OAssignment (';'
+	assignment+=OAssignment)*)?')' |
+	{PredicateFunctionAssignmentOnly} name='Assign' '(' (assignment+=OAssignment (';' assignment+=OAssignment)*)?')'; // ('with' attributes+=Assignment (',' attributes+=Assignment)*)?;
+// {PredicateFunctionAssignmentOnly} name='Assign' '(' (assignment+=OAssignment)* (';' assignment+=OAssignment )?')'
 
 OtherFunction:
 	{PredicateFunctionIsEqual} name='IsEqual' '(' arg1=ID ',' arg2=ID ')' |
@@ -331,22 +213,10 @@ Event:
 	VariableEvent |
 	ObligationEvent |
 	ContractEvent |
-	PowerEvent
-	| DataTransfer;  //Include Data as an Event type, AC
-
-//AC
-DataTransfer returns Event:
-   {DataTransfer} name=ID variable=VariableDotExpression;
-
+	PowerEvent;
 
 VariableEvent returns Event:
 	{VariableEvent} variable=VariableDotExpression;
-
-//AC
-//VariableData returns Event:
-	//{VariableData} variable=VariableDotExpression
-//;
-
 
 PowerEvent returns Event:
 	{PowerEvent} eventName=PowerEventName '(' 'powers.' powerVariable=[Power] ')';
@@ -360,7 +230,7 @@ ObligationEvent returns Event:
 ObligationEventName:
 	'Triggered' | 'Activated' | 'Suspended' | 'Resumed' | 'Discharged' | 'Expired' | 'Fulfilled' | 'Violated' | 'Terminated';
 
-ContractEvent returns Eselfvent:
+ContractEvent returns Event:
 	{ContractEvent} eventName=ContractEventName '(' 'self' ')';
 
 ContractEventName:
@@ -384,7 +254,7 @@ PointAtom returns PointExpression:
 	{PointAtomObligationEvent} obligationEvent=ObligationEvent |
 	{PointAtomContractEvent} contractEvent=ContractEvent |
 	{PointAtomPowerEvent} powerEvent=PowerEvent;
-
+	
 
 Timevalue:
 	{TimevalueInt} value=INT |
@@ -423,9 +293,3 @@ ContractState:
 
 ContractStateName:
 	'Form' | 'UnAssign' | 'InEffect' | 'Suspension' | 'Rescission' | 'SuccessfulTermination' | 'UnsuccessfulTermination' | 'Active';
-
-//Modification:
-//	name=ID ':' (trigger=Proposition '->')? (function='Assign') '(' assignment=OAssignment')';
-	// assignee=VariableDotExpression ":=" expression=Expression
-
-
